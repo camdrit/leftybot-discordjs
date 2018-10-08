@@ -19,10 +19,12 @@ client.on('ready', () => {
 });
 
 client.on('message', message => {
-	if (!message.content.startsWith(prefix) || message.author.bot) return;
-
+	if (!message.content.startsWith(prefix) && (message.mentions.users.first() && message.mentions.users.first().id !== client.user.id) || message.author.bot) return;
 	const args = message.content.slice(prefix.length).split(/ +/);
-	const commandName = args.shift().toLowerCase();
+	let commandName = args.shift().toLowerCase();
+
+	// if this command was called by mention instead of command prefix then we need to shift again to remove the mention
+	if (!message.content.startsWith(prefix)) commandName = args.shift().toLowerCase();
 
 	if (!client.commands.has(commandName)) return;
 
