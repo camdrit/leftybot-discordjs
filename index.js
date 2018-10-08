@@ -1,6 +1,7 @@
 const fs = require('fs');
 const Discord = require('discord.js');
-const { prefix, token, stringResources, defaultCooldown } = require('./config.json');
+const MongoClient = require('mongodb').MongoClient;
+const { prefix, token, stringResources, defaultCooldown, mongoDB } = require('./config.json');
 
 const client = new Discord.Client();
 client.commands = new Discord.Collection();
@@ -14,8 +15,10 @@ for (const file of commandFiles) {
 
 const cooldowns = new Discord.Collection();
 
+const URL = `${mongoDB.host}:${mongoDB.port}/${mongoDB.db}`;
+
 client.on('ready', () => {
-	console.log('Ready!');
+	console.log('Bot ready!');
 });
 
 client.on('message', message => {
@@ -72,7 +75,18 @@ client.on('message', message => {
 	}
 
 	try {
-		command.execute(message, args);
+		if (command.requiresMongod) {
+			MongoClient.connect(URL, { useNewUrlParser: true }, (err, db) => {
+				if (err) {
+					console.error(err);
+					message.reply(stringResources.errors.GenericExceptionError);
+				}
+				const dbo = db.db(mongoDB.db);
+				command.execute(message, args, dbo);
+				db.close();
+			});
+		}
+		else { command.execute(message, args); }
 	}
 	catch (error) {
 		console.error(error);
