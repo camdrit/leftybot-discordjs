@@ -1,0 +1,28 @@
+{
+  "name": "leftybot-discordjs",
+  "version": "1.0.0",
+  "description": "An LGBT friendly Discord bot that responds to users using their proper pronouns (when set) and remembers birthdays",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/camdrit/leftybot-discordjs.git"
+  },
+  "keywords": [
+    "LGBT",
+    "discord",
+    "discord.js",
+    "discordjs",
+    "bot",
+    "birthday",
+    "pronouns"
+  ],
+  "author": "Cam Richardson (@camdrit)",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/camdrit/leftybot-discordjs/issues"
+  },
+  "homepage": "https://github.com/camdrit/leftybot-discordjs#readme"
+}
