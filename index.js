@@ -16,6 +16,16 @@ for (const file of commandFiles) {
 const cooldowns = new Discord.Collection();
 
 const URL = `${mongoDB.host}:${mongoDB.port}/${mongoDB.db}`;
+let dbObject, mongoClient;
+
+MongoClient.connect(URL, { useNewUrlParser: true }, (err, res) => {
+	if (err) {
+		console.error(err);
+	}
+	dbObject = res.db(mongoDB.db);
+	console.log('Database connection opened.');
+	mongoClient = res;
+});
 
 client.on('ready', () => {
 	console.log('Bot ready!');
@@ -75,17 +85,7 @@ client.on('message', message => {
 	}
 
 	try {
-		if (command.requiresMongod) {
-			MongoClient.connect(URL, { useNewUrlParser: true }, (err, db) => {
-				if (err) {
-					console.error(err);
-					message.reply(stringResources.errors.GenericExceptionError);
-				}
-				const dbo = db.db(mongoDB.db);
-				command.execute(message, args, dbo);
-				db.close();
-			});
-		}
+		if (command.requiresMongod) { command.execute(message, args, dbObject); }
 		else { command.execute(message, args); }
 	}
 	catch (error) {
@@ -95,3 +95,13 @@ client.on('message', message => {
 });
 
 client.login(token);
+
+process.on('SIGINT', cleanup);
+process.on('SIGTERM', cleanup);
+
+function cleanup() {
+	mongoClient.close(() => {
+		console.log('Closing database connection.');
+		process.exit(0);
+	});
+}
