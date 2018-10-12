@@ -19,12 +19,16 @@ module.exports = {
 		const userID = Long.fromString(message.author.id);
 		let pronounType;
 		dbo.collection('pronounsList').find({ _id: userID }).toArray((err, result) => {
-			pronounType = result.shift().pronounType;
+      if (err) return console.log(err);
+			pronounType = result.length ? result.shift().pronounType : null;
 			if (pronounType) {
 				dbo.collection('pronounTypes').find({ type: pronounType }).toArray((err, results) => {
 					if (err) console.log(err);
-					const nouns = results.shift().nouns;
-					return message.reply(`You currently use ${nouns[0]}/${nouns[1]} pronouns!`);
+					const nouns = results.length ? results.shift().nouns : null;
+          if (nouns) {
+            return message.reply(`You currently use ${nouns[0]}/${nouns[1]} pronouns!`);
+          }
+					else this.generatePronounTypes(message, dbo);
 				});
 			}
 			else {
@@ -33,7 +37,7 @@ module.exports = {
 
 		});
 	},
-	setPronouns(message, args, dbo) {
+	setPronouns(message, dbo) {
 		const pronoun = args[0];
 		const name = (message.member.nickname) ? message.author.member.nickname : message.author.name;
 		if (pronoun === 'he' || pronoun === 'she' || pronoun === 'they') {
@@ -51,4 +55,17 @@ module.exports = {
 			return message.reply(`Alright, I will only refer to you using ${pronouns[0]}/${pronouns[1]} pronouns! :sparkling_heart:`);
 		});
 	},
+  generatePronounTypes(message, dbo) {
+    // Will generate pronounTypes collection on first use
+    const he = { type: "he", nouns: [ "he", "him" ] };
+    const she = { type: "she", nouns: [ "she", "her" ] };
+    const they = { type: "they", nouns: [ "they", "them" ] };
+    let promise;
+    
+    dbo.collection('pronounTypes').save(he).then(
+      dbo.collection('pronounTypes').save(she).then(
+        dbo.collection('pronounTypes').save(they).then((err, res) => this.checkPronouns(message, dbo))
+      )
+    )
+  },
 };
