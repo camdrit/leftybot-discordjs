@@ -15,7 +15,7 @@ for (const file of commandFiles) {
 
 const cooldowns = new Discord.Collection();
 
-const URL = `mongodb://${mongoDB.host}:${mongoDB.port}/${mongoDB.db}`;
+const URL = `${mongoDB.host}:${mongoDB.port}/${mongoDB.db}`;
 let dbObject, mongoClient;
 
 MongoClient.connect(URL, { useNewUrlParser: true }, (err, res) => {

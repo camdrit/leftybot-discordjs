@@ -5,7 +5,7 @@ const Long = require('mongodb').Long;
 module.exports = {
 	name: 'pronouns',
 	description: 'This command allows you to set your preferred pronouns. I\'ll remember them and only refer to you using those pronouns!',
-	usage: '',
+	usage: 'he | she | they',
 	requiresMongod: true,
 	execute(message, args, dbo) {
 		if (!args.length) {
@@ -19,16 +19,16 @@ module.exports = {
 		const userID = Long.fromString(message.author.id);
 		let pronounType;
 		dbo.collection('pronounsList').find({ _id: userID }).toArray((err, result) => {
-      if (err) return console.log(err);
+			if (err) return console.log(err);
 			pronounType = result.length ? result.shift().pronounType : null;
 			if (pronounType) {
 				dbo.collection('pronounTypes').find({ type: pronounType }).toArray((err, results) => {
 					if (err) console.log(err);
 					const nouns = results.length ? results.shift().nouns : null;
-          if (nouns) {
-            return message.reply(`You currently use ${nouns[0]}/${nouns[1]} pronouns!`);
-          }
-					else this.generatePronounTypes(message, dbo);
+					if (nouns) {
+						return message.reply(`You currently use ${nouns[0]}/${nouns[1]} pronouns!`);
+					}
+					else { this.generatePronounTypes(message, dbo); }
 				});
 			}
 			else {
@@ -37,9 +37,9 @@ module.exports = {
 
 		});
 	},
-	setPronouns(message, dbo) {
+	setPronouns(message, args, dbo) {
 		const pronoun = args[0];
-		const name = (message.member.nickname) ? message.author.member.nickname : message.author.name;
+		const name = (message.member.nickname) ? message.author.member.nickname : message.author.username;
 		if (pronoun === 'he' || pronoun === 'she' || pronoun === 'they') {
 			dbo.collection('pronounsList').save({ _id: Long.fromString(message.author.id), 'name': name, pronounType: pronoun },
 				(err) => { if (err) console.log(err); this.replyWithNewPronons(message, pronoun, dbo); });
@@ -55,17 +55,16 @@ module.exports = {
 			return message.reply(`Alright, I will only refer to you using ${pronouns[0]}/${pronouns[1]} pronouns! :sparkling_heart:`);
 		});
 	},
-  generatePronounTypes(message, dbo) {
-    // Will generate pronounTypes collection on first use
-    const he = { type: "he", nouns: [ "he", "him" ] };
-    const she = { type: "she", nouns: [ "she", "her" ] };
-    const they = { type: "they", nouns: [ "they", "them" ] };
-    let promise;
-    
-    dbo.collection('pronounTypes').save(he).then(
-      dbo.collection('pronounTypes').save(she).then(
-        dbo.collection('pronounTypes').save(they).then((err, res) => this.checkPronouns(message, dbo))
-      )
-    )
-  },
+	generatePronounTypes(message, dbo) {
+		// Will generate pronounTypes collection on first use
+		const he = { type: 'he', nouns: [ 'he', 'him' ] };
+		const she = { type: 'she', nouns: [ 'she', 'her' ] };
+		const they = { type: 'they', nouns: [ 'they', 'them' ] };
+
+		dbo.collection('pronounTypes').save(he).then(
+			dbo.collection('pronounTypes').save(she).then(
+				dbo.collection('pronounTypes').save(they).then(() => this.checkPronouns(message, dbo))
+			)
+		);
+	},
 };
