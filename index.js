@@ -15,7 +15,7 @@ for (const file of commandFiles) {
 
 const cooldowns = new Discord.Collection();
 
-const URL = `${mongoDB.host}:${mongoDB.port}/${mongoDB.db}`;
+const URL = `mongodb://${mongoDB.host}:${mongoDB.port}/${mongoDB.db}`;
 let dbObject, mongoClient;
 
 MongoClient.connect(URL, { useNewUrlParser: true }, (err, res) => {
@@ -25,10 +25,12 @@ MongoClient.connect(URL, { useNewUrlParser: true }, (err, res) => {
 	dbObject = res.db(mongoDB.db);
 	console.log('Database connection opened.');
 	mongoClient = res;
+	
 });
 
 client.on('ready', () => {
 	console.log('Bot ready!');
+	client.user.setActivity(`type ${prefix}help for commands`);
 });
 
 client.on('message', message => {
@@ -102,6 +104,6 @@ process.on('SIGTERM', cleanup);
 function cleanup() {
 	mongoClient.close(() => {
 		console.log('Closing database connection.');
-		process.exit(0);
+		client.destroy().then(process.exit(0));
 	});
 }

@@ -28,7 +28,7 @@ module.exports = {
 					if (nouns) {
 						return message.reply(`You currently use ${nouns[0]}/${nouns[1]} pronouns!`);
 					}
-					else { this.generatePronounTypes(message, dbo); }
+					else { this.seedPronounTypes(message, dbo); }
 				});
 			}
 			else {
@@ -55,7 +55,7 @@ module.exports = {
 			return message.reply(`Alright, I will only refer to you using ${pronouns[0]}/${pronouns[1]} pronouns! :sparkling_heart:`);
 		});
 	},
-	generatePronounTypes(message, dbo) {
+	seedPronounTypes(message, dbo) {
 		// Will generate pronounTypes collection on first use
 		const he = { type: 'he', nouns: [ 'he', 'him' ] };
 		const she = { type: 'she', nouns: [ 'she', 'her' ] };
