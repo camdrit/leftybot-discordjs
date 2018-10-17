@@ -28,7 +28,7 @@ module.exports = {
 					if (nouns) {
 						return message.reply(`You currently use ${nouns[0]}/${nouns[1]} pronouns!`);
 					}
-					else { this.seedPronounTypes(message, dbo); }
+					else { this.seedPronounTypes(message, dbo).then(this.checkPronouns(message, dbo)); }
 				});
 			}
 			else {
@@ -39,7 +39,7 @@ module.exports = {
 	},
 	setPronouns(message, args, dbo) {
 		const pronoun = args[0];
-		const name = (message.member.nickname) ? message.author.member.nickname : message.author.username;
+		const name = (message.member.nickname) ? message.member.nickname : message.author.username;
 		if (pronoun === 'he' || pronoun === 'she' || pronoun === 'they') {
 			dbo.collection('pronounsList').save({ _id: Long.fromString(message.author.id), 'name': name, pronounType: pronoun },
 				(err) => { if (err) console.log(err); this.replyWithNewPronons(message, pronoun, dbo); });
@@ -51,20 +51,24 @@ module.exports = {
 	replyWithNewPronons(message, pronoun, dbo) {
 		dbo.collection('pronounTypes').find({ type: pronoun }).toArray((err, res) => {
 			if (err) console.log(err);
-			const pronouns = res.shift().nouns;
-			return message.reply(`Alright, I will only refer to you using ${pronouns[0]}/${pronouns[1]} pronouns! :sparkling_heart:`);
+			const pronouns = res.length ? res.shift().nouns : null;
+			if (pronouns) {
+				return message.reply(`Alright, I will only refer to you using ${pronouns[0]}/${pronouns[1]} pronouns! :sparkling_heart:`);
+			} else {
+				this.seedPronounTypes(message, dbo).then(this.replyWithNewPronons(message, pronoun, dbo));
+			}
 		});
 	},
-	seedPronounTypes(message, dbo) {
+	async seedPronounTypes(message, dbo) {
 		// Will generate pronounTypes collection on first use
 		const he = { type: 'he', nouns: [ 'he', 'him' ] };
 		const she = { type: 'she', nouns: [ 'she', 'her' ] };
 		const they = { type: 'they', nouns: [ 'they', 'them' ] };
 
 		dbo.collection('pronounTypes').save(he).then(
-			dbo.collection('pronounTypes').save(she).then(
-				dbo.collection('pronounTypes').save(they).then(() => this.checkPronouns(message, dbo))
-			)
+			dbo.collection('pronounTypes').save(she).then(() => {
+				return dbo.collection('pronounTypes').save(they);
+			})
 		);
 	},
 };
