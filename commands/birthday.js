@@ -13,7 +13,7 @@ module.exports = {
 		const tomorrow = new Date();
 		tomorrow.setDate(today.getDate() + 1);
 		const parsedDate = new Date(args[0]);
-		const name = (message.member.nickname) ? message.author.member.nickname : message.author.username;
+		const name = (message.member.nickname) ? message.member.nickname : message.author.username;
 		getUserPronouns(message.author.id, dbo, (pronouns) => {
 			const adjective = pronouns[0] === 'they' ? 'are' : 'is';
 			if (parsedDate.toDateString() === 'Invalid Date') {
