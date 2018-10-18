@@ -59,7 +59,7 @@ module.exports = {
 			});
 		}
 	},
-	addSongsToSpotifyPlaylist(spotifyApi, tracks, trackInfo, dbo, message) {
+	addSongsToSpotifyPlaylist(spotifyApi, tracks, message) {
 		spotifyApi.addTracksToPlaylist(spotifyConfig.targetPlaylist, tracks).then(
 			(data) => {
 				const emoji = message.guild.emojis.find( emo => emo.name === 'lefty');
@@ -71,11 +71,11 @@ module.exports = {
 			}
 		)
 	},
-	async checkForDuplicateTracks(tracks, trackInfo, dbo, callback) {
+	async checkForDuplicateTracks(tracks, dbo, callback) {
 		if (Array.isArray(tracks)) {
 			let counter = 0;
 			const originalLength = tracks.length;
-			let message = `Adding album ${trackInfo.title} by ${trackInfo.artist} to playlist.`;
+			let message = `Adding album to playlist.`;
 			tracks.forEach((track, index, object) => {
 				dbo.collection('spotifyTracks').findOne({ _id: track }, (err, res) => {
 					if (err) console.error('There was an error when checking for duplicate playlist tracks.');
@@ -94,7 +94,7 @@ module.exports = {
 						});
 						if (tracks.length === originalLength) callback(tracks, message);
 						else if (tracks.length < originalLength && tracks.length > 0) callback(tracks, `${message} Some tracks will be skipped as they have already been added.`);
-						else callback(null, `Album ${trackInfo.title} by ${trackInfo.artist} is already in the playlist. Skipping...`);
+						else callback(null, `Album is already in the playlist. Skipping...`);
 					}
 				});
 			});
@@ -103,10 +103,10 @@ module.exports = {
 			dbo.collection('spotifyTracks').findOne({ _id: tracks }, (err, res) => {
 				if (err) console.error('There was an error when checking for duplicate playlist tracks.');
 
-				if (res) callback(null, `Song ${trackInfo.title} by ${trackInfo.artist} is already in playlist. Skipping...`);
+				if (res) callback(null, `Song is already in playlist. Skipping...`);
 				else { 
 					dbo.collection('spotifyTracks').updateOne({ _id: tracks }, { $set: { _id: tracks } }, { upsert: true });
-					callback([`spotify:track:${tracks}`], `Adding song ${trackInfo.title} by ${trackInfo.artist} to playlist.`);
+					callback([`spotify:track:${tracks}`], `Adding song to playlist.`);
 				}
 			});
 		}

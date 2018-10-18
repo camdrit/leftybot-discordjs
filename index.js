@@ -50,7 +50,7 @@ client.on('ready', () => {
 });
 
 client.on('message', message => {
-	if (spotifyWebApi && message.channel.name === channels.spotifyWatch && message.embeds.length && message.embeds[0].provider.name === 'Spotify') parseSpotifyLink(message);
+	if (spotifyWebApi && message.channel.name === channels.spotifyWatch && message.content.indexOf('open.spotify.com') !== -1) parseSpotifyLink(message);
 	else parseCommand(message);
 });
 
@@ -173,14 +173,12 @@ function parseCommand(message) {
 }
 
 function parseSpotifyLink(message) {
-	const embed = message.embeds.shift();
-	const url = embed.url;
-	let type = url.indexOf('track') !== -1 ? 'track' : 'album'
-	const track = url.split(`https://open.spotify.com/${type}/`)[1].split('?')[0];
-	const trackInfo = {
-		title: embed.title,
-		artist: type === 'track' ? embed.description.split('a song by')[1].split('on Spotify')[0].trim() : embed.description.split('an album by')[1].split('on Spotify')[0].trim()
-	}
+	let type = message.content.indexOf('track') !== -1 ? 'track' : 'album';
+	const track = message.content.split(`https://open.spotify.com/${type}/`)[1].split('?')[0];
+	// const trackInfo = {
+	// 	title: embed.title,
+	// 	artist: type === 'track' ? embed.description.split('a song by')[1].split('on Spotify')[0].trim() : embed.description.split('an album by')[1].split('on Spotify')[0].trim()
+	// }
 	if (spotifyWebApi.getAccessToken()) {
 		spotifyWebApi.refreshAccessToken().then(
 			(data) => {
@@ -191,14 +189,26 @@ function parseSpotifyLink(message) {
 	if (type === 'album') {
 		spotifyWebApi.getAlbum(track).then((data) => {
 			const tracks = data.body.tracks.items.map((t) => { return t.id });
-			checkForDuplicateTracks(tracks, trackInfo, dbObject, (returnedTracks, status) => {
+			checkForDuplicateTracks(tracks, dbObject, (returnedTracks, status) => {
 				console.log(status);
-				if (returnedTracks) addSongsToSpotifyPlaylist(spotifyWebApi, returnedTracks, trackInfo, dbObject, message);
+				if (returnedTracks) addSongsToSpotifyPlaylist(spotifyWebApi, returnedTracks, message);
 			});
 		});
 	}
-	else checkForDuplicateTracks(track, trackInfo, dbObject, (returnedTracks, status) => {
+	else checkForDuplicateTracks(track, dbObject, (returnedTracks, status) => {
 		console.log(status);
-		if (returnedTracks) addSongsToSpotifyPlaylist(spotifyWebApi, returnedTracks, trackInfo, dbObject, message);
+		if (returnedTracks) addSongsToSpotifyPlaylist(spotifyWebApi, returnedTracks, message);
 	});
+}
+
+function asyncWait(timer) {
+	return new Promise(resolve => {
+		timer = timer || 2000;
+		setTimeout(() => resolve(), timer);
+	});
+}
+
+async function callWhenReady(func, timer, condition, ...args) {
+	while (!condition) await asyncWait(timer);
+	func(args);
 }
