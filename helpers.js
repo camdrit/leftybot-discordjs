@@ -2,7 +2,8 @@ const Long = require('mongodb').Long;
 
 module.exports = {
 	getUserPronouns(userID, dbo, callback) {
-		dbo.collection('pronounsList').find({ _id: Long.fromString(userID) }).toArray((err, result) => {
+		let targetID = userID.constructor.name == "Long" ? userID : Long.fromString(userID);
+		dbo.collection('pronounsList').find({ _id: targetID }).toArray((err, result) => {
 			if (err) return console.log(err);
 			const pronounType = result.length ? result.shift().pronounType : null;
 			if (pronounType) {
@@ -24,5 +25,12 @@ module.exports = {
 	capitalize(word) {
 		if (word.length > 1) return word.charAt(0).toUpperCase() + word.substr(1);
 		return word.toUpperCase();
+	},
+	getFormattedDate(date) {
+		return date.getMonth() + '/' + date.getDate();
+	},
+	getUserAge(date) {
+		const now = new Date();
+		return now.getFullYear() - date.getFullYear();
 	},
 };

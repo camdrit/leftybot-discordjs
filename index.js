@@ -1,7 +1,9 @@
 const fs = require('fs');
 const Discord = require('discord.js');
-const MongoClient = require('mongodb').MongoClient;
-const { prefix, token, stringResources, defaultCooldown, mongoDB } = require('./config.json');
+const { MongoClient, Long } = require('mongodb');
+const { prefix, token, stringResources, defaultCooldown, mongoDB, channels } = require('./config.json');
+const cron = require('node-cron');
+const { getUserAge, getFormattedDate, getUserPronouns, capitalize } = require('./helpers');
 
 const client = new Discord.Client();
 client.commands = new Discord.Collection();
@@ -31,6 +33,11 @@ MongoClient.connect(URL, { useNewUrlParser: true }, (err, res) => {
 client.on('ready', () => {
 	console.log('Bot ready!');
 	client.user.setActivity(`type ${prefix}help for commands`);
+	
+	checkBirthdays();
+	cron.schedule('* 12 * * *', () => {
+		checkBirthdays();
+	});
 });
 
 client.on('message', message => {
@@ -105,5 +112,48 @@ function cleanup() {
 	mongoClient.close(() => {
 		console.log('Closing database connection.');
 		client.destroy().then(process.exit(0));
+	});
+}
+
+function checkBirthdays() {
+	console.log('Checking birthdays...');
+	dbObject.collection('birthdaysList').find().toArray((err, res) => {
+		if (err) console.error('error checking birthdays!');
+
+		const channel = client.channels.find(ch => ch.name === channels.birthdayAnnouncements);
+		let totalUsers = 0;
+		let singleMessage = "";
+		let bulkMessage = "@everyone :birthday: Birthday role call! These lovely gamers have birthdays **tomorrow**:\n\n";
+
+		const today = new Date();
+		const tomorrow = new Date();
+		tomorrow.setDate(today.getDate() + 1);
+		let birthdays = [];
+
+		res.forEach((person) => {
+			const date = new Date(person.birthday);
+			if (getFormattedDate(date) === getFormattedDate(tomorrow)) {
+				birthdays.push(person);
+				
+			}
+		});
+
+		let counter = 0;
+
+		birthdays.forEach((person) => {
+			getUserPronouns(person._id, dbObject, (pronouns) => {
+				counter++;
+				const id = person._id.toString();
+				singleMessage = `@everyone ${channel.guild.members.get(id)}'s birthday is **tomorrow!** :birthday: ${capitalize(pronouns[0])} will be ${getUserAge(new Date(person.birthday))} years old! Be sure to wish ${pronouns[1]} a happy birthday when the time comes!`;
+				bulkMessage += `${channel.guild.members.get(id)} will be ${getUserAge(new Date(person.birthday))} years old!\n`;
+				if (counter === birthdays.length) {
+					if (birthdays.length === 1) channel.send(singleMessage);
+					else {
+						bulkMessage += '\n Let\'s all remember to wish these gamers a happy birthday **tomorrow!** :confetti_ball:';
+						channel.send(bulkMessage);
+					}
+				}
+			});
+		});
 	});
 }

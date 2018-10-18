@@ -1,5 +1,5 @@
 const Long = require('mongodb').Long;
-const { getUserPronouns, capitalize } = require('../helpers.js');
+const { getUserPronouns, capitalize, getFormattedDate, getUserAge } = require('../helpers.js');
 
 
 module.exports = {
@@ -24,11 +24,11 @@ module.exports = {
 					(err) => {
 						console.log(`Setting birthday for user ${name} <${message.author.id}>`);
 						if (err) return console.log(err);
-						if (this.getFormattedDate(parsedDate) == this.getFormattedDate(today)) {
-							return message.channel.send(`Ok, so your birthday is **${parsedDate.toLocaleDateString()}**? I'll remember that! Wait...whoa! That means your birthday is today! Hey @everyone it's ${message.author}'s birthday today! ${capitalize(pronouns[0])} ${adjective} ${this.getUserAge(parsedDate)} years old today! :birthday:`);
+						if (getFormattedDate(parsedDate) == getFormattedDate(today)) {
+							return message.channel.send(`Ok, so your birthday is **${parsedDate.toLocaleDateString()}**? I'll remember that! Wait...whoa! That means your birthday is today! Hey @everyone it's ${message.author}'s birthday today! ${capitalize(pronouns[0])} ${adjective} ${getUserAge(parsedDate)} years old today! :birthday:`);
 						}
-						else if (this.getFormattedDate(parsedDate) == this.getFormattedDate(tomorrow)) {
-							return message.channel.send(`Ok, so your birthday is **${parsedDate.toLocaleDateString()}**? I'll remember that! Wait...whoa! That means your birthday is tomorrow! Hey @everyone it's ${message.author}'s birthday tomorrow! ${capitalize(pronouns[0])} will be ${this.getUserAge(parsedDate)} years old! :birthday: Let's all wish ${pronouns[1]} a happy birthday when the time comes!`);
+						else if (getFormattedDate(parsedDate) == getFormattedDate(tomorrow)) {
+							return message.channel.send(`Ok, so your birthday is **${parsedDate.toLocaleDateString()}**? I'll remember that! Wait...whoa! That means your birthday is tomorrow! Hey @everyone it's ${message.author}'s birthday tomorrow! ${capitalize(pronouns[0])} will be ${getUserAge(parsedDate)} years old! :birthday: Let's all wish ${pronouns[1]} a happy birthday when the time comes!`);
 						}
 						else {
 							return message.channel.send(`Ok, so your birthday is **${parsedDate.toDateString()}**? I'll remember that!`);
@@ -37,11 +37,5 @@ module.exports = {
 			}
 		});
 	},
-	getUserAge(date) {
-		const now = new Date();
-		return now.getFullYear() - date.getFullYear();
-	},
-	getFormattedDate(date) {
-		return date.getMonth() + '/' + date.getDate();
-	},
+	
 };
