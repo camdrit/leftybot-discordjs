@@ -1,9 +1,10 @@
 const fs = require('fs');
 const Discord = require('discord.js');
 const { MongoClient, Long } = require('mongodb');
-const { prefix, token, stringResources, defaultCooldown, mongoDB, channels } = require('./config.json');
+const SpotifyWebApi = require('spotify-web-api-node');
 const cron = require('node-cron');
-const { getUserAge, getFormattedDate, getUserPronouns, capitalize } = require('./helpers');
+const { getUserAge, getFormattedDate, getUserPronouns, capitalize, getSpotifyAuthorization, addSongsToSpotifyPlaylist, checkForDuplicateTracks } = require('./helpers');
+const { prefix, token, stringResources, defaultCooldown, mongoDB, channels, spotifyConfig } = require('./config.json');
 
 const client = new Discord.Client();
 client.commands = new Discord.Collection();
@@ -30,77 +31,27 @@ MongoClient.connect(URL, { useNewUrlParser: true }, (err, res) => {
 	
 });
 
+const spotifyWebApi = spotifyConfig.spotifyEnabled ? new SpotifyWebApi({
+	clientId: spotifyConfig.clientID,
+	clientSecret: spotifyConfig.clientSecret,
+	redirectUri: spotifyConfig.redirectUri
+}) : null;
+
 client.on('ready', () => {
 	console.log('Bot ready!');
 	client.user.setActivity(`type ${prefix}help for commands`);
 	
 	checkBirthdays();
-	cron.schedule('* 12 * * *', () => {
+	cron.schedule('0 12 * * *', () => {
 		checkBirthdays();
 	});
+
+	if (spotifyWebApi) getSpotifyAuthorization(spotifyWebApi);
 });
 
 client.on('message', message => {
-	if (!message.content.startsWith(prefix) && (message.mentions.users.first() && message.mentions.users.first().id !== client.user.id) || message.author.bot) return;
-	const args = message.content.slice(prefix.length).split(/ +/);
-	let commandName = args.shift().toLowerCase();
-
-	// if this command was called by mention instead of command prefix then we need to shift again to remove the mention
-	if (!message.content.startsWith(prefix)) commandName = args.shift().toLowerCase();
-
-	if (!client.commands.has(commandName)) return;
-
-	const command = client.commands.get(commandName)
-		|| client.commands.find(cmd => cmd.aliases && cmd.aliases.includes(commandName));
-
-	if (!command) return;
-
-	if (command.args && !args.length) {
-		let reply = `${message.author} ${stringResources.errors.NoArgumentsFoundError}`;
-
-		if (command.usage) {
-			reply += `\nThe proper usage would be: \`${prefix}${command.name} ${command.usage}\``;
-		}
-
-		return message.channel.send(reply);
-	}
-
-	if (command.guildOnly && message.channel.type !== 'text') {
-		return message.reply(stringResources.errors.GuildOnlyCommandsError);
-	}
-
-	if (!cooldowns.has(command.name)) {
-		cooldowns.set(command.name, new Discord.Collection());
-	}
-
-	const now = Date.now();
-	const timestamps = cooldowns.get(command.name);
-	const cooldownAmount = (command.cooldown || defaultCooldown) * 1000;
-
-	if (!timestamps.has(message.author.id)) {
-		timestamps.set(message.author.id, now);
-		setTimeout(() => timestamps.delete(message.author.id), cooldownAmount);
-	}
-	else {
-		const expirationTime = timestamps.get(message.author.id) + cooldownAmount;
-
-		if (now < expirationTime) {
-			const timeLeft = (expirationTime - now) / 1000;
-			return message.reply(`Please wait ${timeLeft.toFixed(1)} more seconds(s) before reusing the \`${command.name}\` command.`);
-		}
-
-		timestamps.set(message.author.id, now);
-		setTimeout(() => timestamps.delete(message.author.id), cooldownAmount);
-	}
-
-	try {
-		if (command.requiresMongod) { command.execute(message, args, dbObject); }
-		else { command.execute(message, args); }
-	}
-	catch (error) {
-		console.error(error);
-		message.reply(stringResources.errors.GenericExceptionError);
-	}
+	if (spotifyWebApi && message.channel.id === channels.spotifyWatch && message.embeds.length && message.embeds[0].provider.name === 'Spotify') parseSpotifyLink(message);
+	else parseCommand(message);
 });
 
 client.login(token);
@@ -155,5 +106,99 @@ function checkBirthdays() {
 				}
 			});
 		});
+	});
+}
+
+function parseCommand(message) {
+	const prefixRegex = new RegExp(`^(<@!?${client.user.id}>|\\${prefix})\\s*`);
+	if (!prefixRegex.test(message.content)) return;
+
+	const [, matchedPrefix] = message.content.match(prefixRegex);
+	const args = message.content.slice(matchedPrefix.length).trim().split(/ +/);
+	const commandName = args.shift();
+
+	if (!client.commands.has(commandName)) return;
+
+	const command = client.commands.get(commandName)
+		|| client.commands.find(cmd => cmd.aliases && cmd.aliases.includes(commandName));
+
+	if (!command) return;
+
+	if (command.args && !args.length) {
+		let reply = `${message.author} ${stringResources.errors.NoArgumentsFoundError}`;
+
+		if (command.usage) {
+			reply += `\nThe proper usage would be: \`${prefix}${command.name} ${command.usage}\``;
+		}
+
+		return message.channel.send(reply);
+	}
+
+	if (command.guildOnly && message.channel.type !== 'text') {
+		return message.reply(stringResources.errors.GuildOnlyCommandsError);
+	}
+
+	if (!cooldowns.has(command.name)) {
+		cooldowns.set(command.name, new Discord.Collection());
+	}
+
+	const now = Date.now();
+	const timestamps = cooldowns.get(command.name);
+	const cooldownAmount = (command.cooldown || defaultCooldown) * 1000;
+
+	if (!timestamps.has(message.author.id)) {
+		timestamps.set(message.author.id, now);
+		setTimeout(() => timestamps.delete(message.author.id), cooldownAmount);
+	}
+	else {
+		const expirationTime = timestamps.get(message.author.id) + cooldownAmount;
+
+		if (now < expirationTime) {
+			const timeLeft = (expirationTime - now) / 1000;
+			return message.reply(`Please wait ${timeLeft.toFixed(1)} more seconds(s) before reusing the \`${command.name}\` command.`);
+		}
+
+		timestamps.set(message.author.id, now);
+		setTimeout(() => timestamps.delete(message.author.id), cooldownAmount);
+	}
+
+	try {
+		if (command.requiresMongod) { command.execute(message, args, dbObject); }
+		else { command.execute(message, args); }
+	}
+	catch (error) {
+		console.error(error);
+		message.reply(stringResources.errors.GenericExceptionError);
+	}
+}
+
+function parseSpotifyLink(message) {
+	const embed = message.embeds.shift();
+	const url = embed.url;
+	let type = url.indexOf('track') !== -1 ? 'track' : 'album'
+	const track = url.split(`https://open.spotify.com/${type}/`)[1].split('?')[0];
+	const trackInfo = {
+		title: embed.title,
+		artist: type === 'track' ? embed.description.split('a song by')[1].split('on Spotify')[0].trim() : embed.description.split('an album by')[1].split('on Spotify')[0].trim()
+	}
+	if (spotifyWebApi.getAccessToken()) {
+		spotifyWebApi.refreshAccessToken().then(
+			(data) => {
+				spotifyWebApi.setAccessToken(data.body['access_token']);
+			}
+		)
+	}
+	if (type === 'album') {
+		spotifyWebApi.getAlbum(track).then((data) => {
+			const tracks = data.body.tracks.items.map((t) => { return t.id });
+			checkForDuplicateTracks(tracks, trackInfo, dbObject, (returnedTracks, status) => {
+				console.log(status);
+				if (returnedTracks) addSongsToSpotifyPlaylist(spotifyWebApi, returnedTracks, trackInfo, dbObject, message);
+			});
+		});
+	}
+	else checkForDuplicateTracks(track, trackInfo, dbObject, (returnedTracks, status) => {
+		console.log(status);
+		if (returnedTracks) addSongsToSpotifyPlaylist(spotifyWebApi, returnedTracks, trackInfo, dbObject, message);
 	});
 }
