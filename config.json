@@ -1,6 +1,6 @@
 {
     "prefix" : "~",
-    "token" : "bot_token_here",
+    "token" : "MzQ4NTA1NjgyMTI0NzM0NDc0.Dp4h5g.tfgviMPTMLHu-QWVCjKfZdv5IHU",
     "defaultCooldown" : 3,
     "mongoDB" : {
       "host" : "localhost",
@@ -14,15 +14,15 @@
       }
     },
     "channels" : {
-      "birthdayAnnouncements" : "text_channel_name",
-      "spotifyWatch" : "text_channel_name"
+      "birthdayAnnouncements" : "general",
+      "spotifyWatch" : "general"
     },
     "spotifyConfig" : {
       "spotifyEnabled" : true,
-      "clientID" : "spotify_app_client_ID",
-      "clientSecret" : "spotify_app_client_secret",
+      "clientID" : "c0dfde6b73914cca8afc243c3ca027f3",
+      "clientSecret" : "95a40254237a408f92844d1a9defc3f6",
       "redirectUri" : "http://localhost:8000/",
-      "targetPlaylist" : "spotify_target_playlist",
-      "targetPlaylistOwner" : "spotify_target_playlist_owner_username"
+      "targetPlaylist" : "15Yy86yeDH0wOVyOppkG2Q",
+      "targetPlaylistOwner" : "fnnzbq7g8p2exs8ye9fakh3hi"
     }
   }
