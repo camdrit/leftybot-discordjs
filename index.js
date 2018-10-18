@@ -50,7 +50,7 @@ client.on('ready', () => {
 });
 
 client.on('message', message => {
-	if (spotifyWebApi && message.channel.id === channels.spotifyWatch && message.embeds.length && message.embeds[0].provider.name === 'Spotify') parseSpotifyLink(message);
+	if (spotifyWebApi && message.channel.name === channels.spotifyWatch && message.embeds.length && message.embeds[0].provider.name === 'Spotify') parseSpotifyLink(message);
 	else parseCommand(message);
 });
 
