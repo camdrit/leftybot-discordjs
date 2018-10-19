@@ -3,7 +3,7 @@ const Discord = require('discord.js');
 const { MongoClient, Long } = require('mongodb');
 const SpotifyWebApi = require('spotify-web-api-node');
 const cron = require('node-cron');
-const { getUserAge, getFormattedDate, getUserPronouns, capitalize, getSpotifyAuthorization, addSongsToSpotifyPlaylist, checkForDuplicateTracks } = require('./helpers');
+const helpers = require('./helpers');
 const { prefix, token, stringResources, defaultCooldown, mongoDB, channels, spotifyConfig } = require('./config.json');
 
 const client = new Discord.Client();
@@ -46,7 +46,7 @@ client.on('ready', () => {
 		checkBirthdays();
 	});
 
-	if (spotifyWebApi) getSpotifyAuthorization(spotifyWebApi);
+	if (spotifyWebApi) helpers.getSpotifyAuthorization(spotifyWebApi);
 });
 
 client.on('message', message => {
@@ -83,7 +83,7 @@ function checkBirthdays() {
 
 		res.forEach((person) => {
 			const date = new Date(person.birthday);
-			if (getFormattedDate(date) === getFormattedDate(tomorrow)) {
+			if (helpers.getFormattedDate(date) === helpers.getFormattedDate(tomorrow)) {
 				birthdays.push(person);
 				
 			}
@@ -92,11 +92,11 @@ function checkBirthdays() {
 		let counter = 0;
 
 		birthdays.forEach((person) => {
-			getUserPronouns(person._id, dbObject, (pronouns) => {
+			helpers.getUserPronouns(person._id, dbObject, (pronouns) => {
 				counter++;
 				const id = person._id.toString();
-				singleMessage = `@everyone ${channel.guild.members.get(id)}'s birthday is **tomorrow!** :birthday: ${capitalize(pronouns[0])} will be ${getUserAge(new Date(person.birthday))} years old! Be sure to wish ${pronouns[1]} a happy birthday when the time comes!`;
-				bulkMessage += `${channel.guild.members.get(id)} will be ${getUserAge(new Date(person.birthday))} years old!\n`;
+				singleMessage = `@everyone ${channel.guild.members.get(id)}'s birthday is **tomorrow!** :birthday: ${helpers.capitalize(pronouns[0])} will be ${helpers.getUserAge(new Date(person.birthday))} years old! Be sure to wish ${pronouns[1]} a happy birthday when the time comes!`;
+				bulkMessage += `${channel.guild.members.get(id)} will be ${helpers.getUserAge(new Date(person.birthday))} years old!\n`;
 				if (counter === birthdays.length) {
 					if (birthdays.length === 1) channel.send(singleMessage);
 					else {
@@ -175,29 +175,19 @@ function parseCommand(message) {
 function parseSpotifyLink(message) {
 	let type = message.content.indexOf('track') !== -1 ? 'track' : 'album';
 	const track = message.content.split(`https://open.spotify.com/${type}/`)[1].split('?')[0];
-	// const trackInfo = {
-	// 	title: embed.title,
-	// 	artist: type === 'track' ? embed.description.split('a song by')[1].split('on Spotify')[0].trim() : embed.description.split('an album by')[1].split('on Spotify')[0].trim()
-	// }
-	if (spotifyWebApi.getAccessToken()) {
-		spotifyWebApi.refreshAccessToken().then(
-			(data) => {
-				spotifyWebApi.setAccessToken(data.body['access_token']);
-			}
-		)
-	}
+	
 	if (type === 'album') {
 		spotifyWebApi.getAlbum(track).then((data) => {
 			const tracks = data.body.tracks.items.map((t) => { return t.id });
-			checkForDuplicateTracks(tracks, dbObject, (returnedTracks, status) => {
+			helpers.checkForDuplicateTracks(tracks, dbObject, (returnedTracks, status) => {
 				console.log(status);
-				if (returnedTracks) addSongsToSpotifyPlaylist(spotifyWebApi, returnedTracks, message);
+				if (returnedTracks) helpers.addSongsToSpotifyPlaylist(spotifyWebApi, returnedTracks, message);
 			});
 		});
 	}
-	else checkForDuplicateTracks(track, dbObject, (returnedTracks, status) => {
+	else helpers.checkForDuplicateTracks(track, dbObject, (returnedTracks, status) => {
 		console.log(status);
-		if (returnedTracks) addSongsToSpotifyPlaylist(spotifyWebApi, returnedTracks, message);
+		if (returnedTracks) helpers.addSongsToSpotifyPlaylist(spotifyWebApi, returnedTracks, message);
 	});
 }
 

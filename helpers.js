@@ -35,7 +35,7 @@ module.exports = {
 		const now = new Date();
 		return now.getFullYear() - date.getFullYear();
 	},
-	getSpotifyAuthorization(spotifyApi, callback) {
+	getSpotifyAuthorization(spotifyApi, callback, ...args) {
 		if (!spotifyApi.getAccessToken()) {
 			const authorizeURL = spotifyApi.createAuthorizeURL(["playlist-read-private", "playlist-modify-private", "playlist-modify-public"]);
 			let accessCode;
@@ -49,6 +49,7 @@ module.exports = {
 						console.log(`Spotify Api authorization granted. The token expires in ${data.body['expires_in'] / 60} minute(s)`);
 						spotifyApi.setAccessToken(data.body['access_token']);
 						spotifyApi.setRefreshToken(data.body['refresh_token']);
+						if (callback) callback(args);
 					},
 					(error) => { console.log(`There was an error when attempting to retrieve the Spotify Api authorization: ${error}`); }
 				)
@@ -68,6 +69,19 @@ module.exports = {
 			},
 			(error) => {
 				console.log(`There was an error when trying to add track(s) to the playlist: ${error}`);
+				if (error.message === 'Unauthorized') {
+					if (spotifyApi.getAccessToken()) {
+						spotifyApi.refreshAccessToken().then(
+							(data) => {
+								spotifyApi.setAccessToken(data.body['access_token']);
+								this.addSongsToSpotifyPlaylist(spotifyApi, tracks, message);
+							}
+						)
+					} else {
+						
+						this.getSpotifyAuthorization(spotifyApi, this.addSongsToSpotifyPlaylist, spotifyApi, tracks, message);
+					}
+				}
 			}
 		)
 	},
