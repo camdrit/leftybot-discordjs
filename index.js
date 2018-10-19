@@ -50,7 +50,7 @@ client.on('ready', () => {
 });
 
 client.on('message', message => {
-	if (spotifyWebApi && message.channel.name === channels.spotifyWatch && message.content.indexOf('open.spotify.com') !== -1) parseSpotifyLink(message);
+	if (spotifyWebApi && message.channel.name === channels.spotifyWatch && message.content.indexOf('open.spotify.com') !== -1 && message.content.indexOf('!ignore') === -1) parseSpotifyLink(message);
 	else parseCommand(message);
 });
 
